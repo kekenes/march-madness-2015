@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1,user-scalable=no"/>
+    <title>2015 NCAA Men's Basketball Tournament</title>
+    <link rel="stylesheet" href="http://js.arcgis.com/3.13/esri/css/esri.css">
+    <style>
+      html, body, #map {
+        height: 100%;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        background-color: #FFF;
+        overflow: hidden;
+        font-family: "Trebuchet MS";
+      }
+    </style>
+    <script src="http://js.arcgis.com/3.13/"></script>
+    <script>
+      var map, teamLayer, venueLayer, tempLayer;
+
+      require(["esri/map", 
+               "esri/arcgis/utils",
+               "esri/urlUtils",
+               "dojo/domReady!"], 
+              function(Map, arcgisUtils, urlUtils) {
+          
+          arcgisUtils.createMap('9d2a01add621426eaf97b51375268632', 'map').then(function(response){
+            map = response.map;
+            console.log("map: ", map);
+
+            //Get map layers  
+            for(i=0; i < map.graphicsLayerIds.length; i++){
+                var layerName = map.getLayer(map.graphicsLayerIds[i]).name;
+                if(layerName == "Teams")
+                    teamLayer = map.getLayer(map.graphicsLayerIds[i]);
+                if(layerName == "Venues")
+                    venueLayer = map.getLayer(map.graphicsLayerIds[i]);
+            }
+            
+          });
+          
+
+      });
+    </script>
+  </head>
+
+  <body>
+    <div id="map"></div>
+  </body>
+</html>
