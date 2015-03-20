@@ -22,28 +22,98 @@
     <script>
       var map, teamLayer, venueLayer, tempLayer;
 
-      require(["esri/map", 
+      require(["esri/map",
+               "esri/geometry/geometryEngine",
+               "esri/tasks/query",
                "esri/arcgis/utils",
                "esri/urlUtils",
                "dojo/domReady!"], 
-              function(Map, arcgisUtils, urlUtils) {
+              function(Map, geometryEngine, Query, arcgisUtils, urlUtils) {
           
           arcgisUtils.createMap('9d2a01add621426eaf97b51375268632', 'map').then(function(response){
             map = response.map;
-            console.log("map: ", map);
 
             //Get map layers  
             for(i=0; i < map.graphicsLayerIds.length; i++){
                 var layerName = map.getLayer(map.graphicsLayerIds[i]).name;
                 if(layerName == "Teams")
                     teamLayer = map.getLayer(map.graphicsLayerIds[i]);
-                if(layerName == "Venues")
+                if(layerName == "Venues"){
                     venueLayer = map.getLayer(map.graphicsLayerIds[i]);
+                    var venueList = venueLayer.graphics;
+                }
             }
+              console.log("venue layer:", venueLayer);
+              
+            getTeams68(venueList);
+            getTeams64(venueList);
             
           });
           
+          function getTeams68(venues){
+            var teams = [];
+            var teamObj = {};
+            var query = new Query();
+            query.where = "(Rd_68_Result = 'W') or (Rd_68_Result = 'L')";
+            teamLayer.queryFeatures(query, function(results){
 
+              for(i=0; i < results.features.length; i++){
+                teamObj = {};
+                teamObj.name = results.features[i].attributes.University;
+                teamObj.result = results.features[i].attributes.Rd_68_Result;
+                teamObj.venue = results.features[i].attributes.Rd_68_Venue;
+                teamObj.margin = results.features[i].attributes.Rd_68_Margin;
+                
+                //Calculate distance  
+                for(j=0; j < venues.length; j++){
+                  if(venues[j].attributes.Name == teamObj.venue){
+                    var venueGeo = venues[j].geometry;
+                    var teamGeo = results.features[i].geometry;
+                    var dist = geometryEngine.distance(teamGeo, venueGeo, 9002);
+                    teamObj.distance = dist / 5280;
+                    break;
+                  }
+                }
+                
+                teams.push(teamObj);
+              }
+              console.log("round 68 teams: ", teams);
+              return teams;
+            });
+          }
+          
+          function getTeams64(venues){
+            var teams = [];
+            var teamObj = {};
+            var query = new Query();
+            query.where = "(Rd_64_Result = 'W') or (Rd_64_Result = 'L')";
+            teamLayer.queryFeatures(query, function(results){
+
+              for(i=0; i < results.features.length; i++){
+                teamObj = {};
+                teamObj.name = results.features[i].attributes.University;
+                teamObj.result = results.features[i].attributes.Rd_64_Result;
+                teamObj.venue = results.features[i].attributes.Rd_64_Venue;
+                teamObj.margin = results.features[i].attributes.Rd_64_Margin;
+                
+                //calculate distance  
+                for(j=0; j < venues.length; j++){
+                  if(venues[j].attributes.Name == teamObj.venue){
+                    var venueGeo = venues[j].geometry;
+                    var teamGeo = results.features[i].geometry;
+                    var dist = geometryEngine.distance(teamGeo, venueGeo, 9002);
+                    teamObj.distance = dist / 5280;
+                    break;
+                  }
+                }
+                
+                teams.push(teamObj);
+              }
+              console.log("round 64 teams: ", teams);
+              return teams;
+            });
+          }
+          
       });
     </script>
   </head>
