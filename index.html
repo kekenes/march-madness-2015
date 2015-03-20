@@ -70,7 +70,7 @@
                     var venueGeo = venues[j].geometry;
                     var teamGeo = results.features[i].geometry;
                     var dist = geometryEngine.distance(teamGeo, venueGeo, 9002);
-                    teamObj.distance = dist / 5280;
+                    teamObj.distance = Math.floor(dist / 5280);
                     break;
                   }
                 }
@@ -102,7 +102,7 @@
                     var venueGeo = venues[j].geometry;
                     var teamGeo = results.features[i].geometry;
                     var dist = geometryEngine.distance(teamGeo, venueGeo, 9002);
-                    teamObj.distance = dist / 5280;
+                    teamObj.distance = Math.floor(dist / 5280);
                     break;
                   }
                 }
