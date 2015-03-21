@@ -21,6 +21,19 @@
     <script src="http://js.arcgis.com/3.13/"></script>
     <script>
       var map, teamLayer, venueLayer, tempLayer;
+      var finalResults = [];
+//      var Team = function(teamObj, rd){
+//          this.name: teamObj.name;              
+//          this.rounds: {Rd68: null, Rd64: null, Rd32: null, Rd16: null, Rd8: null, Rd4: null, Rd2: null},
+//          venues: [],
+//          distances: [],
+//          avgDist: function(){
+//              for(i=0; i < this.distances.length; i++){
+//                  dist += this.distances[i];
+//              }
+//              return Math.round(dist / this.distances.length);
+//          } 
+//      };
 
       require(["esri/map",
                "esri/geometry/geometryEngine",
@@ -44,6 +57,8 @@
                 }
             }
               console.log("venue layer:", venueLayer);
+              
+              
               
             getTeams68(venueList);
             getTeams64(venueList);
@@ -70,7 +85,7 @@
                     var venueGeo = venues[j].geometry;
                     var teamGeo = results.features[i].geometry;
                     var dist = geometryEngine.distance(teamGeo, venueGeo, 9002);
-                    teamObj.distance = Math.floor(dist / 5280);
+                    teamObj.distance = Math.round(dist / 5280);
                     break;
                   }
                 }
@@ -78,6 +93,7 @@
                 teams.push(teamObj);
               }
               console.log("round 68 teams: ", teams);
+//              compileResults(68, teams);
               return teams;
             });
           }
@@ -102,7 +118,7 @@
                     var venueGeo = venues[j].geometry;
                     var teamGeo = results.features[i].geometry;
                     var dist = geometryEngine.distance(teamGeo, venueGeo, 9002);
-                    teamObj.distance = Math.floor(dist / 5280);
+                    teamObj.distance = Math.round(dist / 5280);
                     break;
                   }
                 }
@@ -113,6 +129,55 @@
               return teams;
             });
           }
+          
+          function generateTeams(){
+            var eachTeam = {};
+            for(i=0; i < teamLayer.graphics.length; i++){
+              eachTeam.name = teamLayer.graphics[i].attributes.University;
+              eachTeam.venues = [];
+              
+            }
+          }
+          
+          function getDistances(team){
+              var venues = [];
+              if(team.attributes.Rd_68_Venue == "UD Arena")
+                 //calculate distance to arena
+              if(team.attributes.Rd_64_Result)
+                  //calculate distance to arena
+              if(team.attributes.Rd_16_Result)
+                  //calculate distance to arena
+              if()
+                  //calculate distance to arena
+          }
+          
+//          function compileResults(round, teamResults){
+//              var team = {};
+//              if(round == 68){
+//                  for(i = 0; i < teamResults.length; i++){
+//                      team.name = teamResults[i].name;
+//                      team.venues = [];
+//                      team.venues.push(teamResults[i].venue);
+//                      team.distances = [];
+//                      team.distances.push(teamResults[i].distance);
+//                      
+//                      var dist = 0;
+//                      for(j=0; j<team.distances.length; j++){
+//                          dist += team.distances[j];
+//                      }
+//                      
+//                      team.avgDistance = dist / team.distances.length;
+//                      team.rd68 = teamResults[i].result;
+//                      team.wins = 0;
+//                      if(team.rd68 == "W")
+//                        team.wins++;
+//                      
+//                      finalResults.push(team);
+//                  }
+//              }
+//              console.log("final results: ", finalResults);
+//              return finalResults;
+//          }
           
       });
     </script>
