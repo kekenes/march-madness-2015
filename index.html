@@ -21,163 +21,203 @@
     <script src="http://js.arcgis.com/3.13/"></script>
     <script>
       var map, teamLayer, venueLayer, tempLayer;
+      var clickCount = 0;
       var finalResults = [];
-//      var Team = function(teamObj, rd){
-//          this.name: teamObj.name;              
-//          this.rounds: {Rd68: null, Rd64: null, Rd32: null, Rd16: null, Rd8: null, Rd4: null, Rd2: null},
-//          venues: [],
-//          distances: [],
-//          avgDist: function(){
-//              for(i=0; i < this.distances.length; i++){
-//                  dist += this.distances[i];
-//              }
-//              return Math.round(dist / this.distances.length);
-//          } 
-//      };
 
       require(["esri/map",
+               "esri/layers/FeatureLayer",
+               "esri/graphic",
+               "esri/geometry/Polyline",
+               "esri/geometry/Point",
+               "esri/symbols/SimpleMarkerSymbol",
+               "esri/symbols/SimpleLineSymbol",
+               "esri/Color",
                "esri/geometry/geometryEngine",
                "esri/tasks/query",
                "esri/arcgis/utils",
                "esri/urlUtils",
+               "dojo/on",
                "dojo/domReady!"], 
-              function(Map, geometryEngine, Query, arcgisUtils, urlUtils) {
+              function(Map, FeatureLayer, Graphic, Polyline, Point, SimpleMarkerSymbol, SimpleLineSymbol, Color, geometryEngine, Query, arcgisUtils, urlUtils, on) {
           
-          arcgisUtils.createMap('9d2a01add621426eaf97b51375268632', 'map').then(function(response){
-            map = response.map;
+          var teamFeatureLayer = new FeatureLayer("http://services.arcgis.com/V6ZHFr6zdgNZuVG0/arcgis/rest/services/NCAA_Tourney_2015/FeatureServer/1", {
+          mode: FeatureLayer.MODE_ONDEMAND,
+          outFields: ["*"]
+          });
+          var venueFeatureLayer = new FeatureLayer("http://services.arcgis.com/V6ZHFr6zdgNZuVG0/arcgis/rest/services/NCAA_Tourney_2015/FeatureServer/0", {
+          mode: FeatureLayer.MODE_ONDEMAND,
+          outFields: ["*"]          
+          });
+          var lineSymbol = new SimpleLineSymbol(SimpleLineSymbol.STYLE_SOLID, new Color([0,0,0], 0.5), 2);
+          var pointSymbol = new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_CIRCLE, 15, lineSymbol, new Color([255,0,0,1]));
+          
+//          arcgisUtils.createMap('9d2a01add621426eaf97b51375268632', 'map').then(function(response){
+//            map = response.map;
 
-            //Get map layers  
-            for(i=0; i < map.graphicsLayerIds.length; i++){
-                var layerName = map.getLayer(map.graphicsLayerIds[i]).name;
-                if(layerName == "Teams")
-                    teamLayer = map.getLayer(map.graphicsLayerIds[i]);
-                if(layerName == "Venues"){
-                    venueLayer = map.getLayer(map.graphicsLayerIds[i]);
-                    var venueList = venueLayer.graphics;
-                }
-            }
-              console.log("venue layer:", venueLayer);
-              
-              
-              
-            getTeams68(venueList);
-            getTeams64(venueList);
-            
+          map = new Map("map", {
+            basemap: "dark-gray",
+            center: [-99, 40],
+            zoom: 4
           });
           
-          function getTeams68(venues){
-            var teams = [];
-            var teamObj = {};
-            var query = new Query();
-            query.where = "(Rd_68_Result = 'W') or (Rd_68_Result = 'L')";
-            teamLayer.queryFeatures(query, function(results){
-
-              for(i=0; i < results.features.length; i++){
-                teamObj = {};
-                teamObj.name = results.features[i].attributes.University;
-                teamObj.result = results.features[i].attributes.Rd_68_Result;
-                teamObj.venue = results.features[i].attributes.Rd_68_Venue;
-                teamObj.margin = results.features[i].attributes.Rd_68_Margin;
-                
-                //Calculate distance  
-                for(j=0; j < venues.length; j++){
-                  if(venues[j].attributes.Name == teamObj.venue){
-                    var venueGeo = venues[j].geometry;
-                    var teamGeo = results.features[i].geometry;
-                    var dist = geometryEngine.distance(teamGeo, venueGeo, 9002);
-                    teamObj.distance = Math.round(dist / 5280);
-                    break;
-                  }
-                }
-                
-                teams.push(teamObj);
-              }
-              console.log("round 68 teams: ", teams);
-//              compileResults(68, teams);
-              return teams;
-            });
-          }
+          map.addLayers([teamFeatureLayer, venueFeatureLayer]);
           
-          function getTeams64(venues){
-            var teams = [];
-            var teamObj = {};
-            var query = new Query();
-            query.where = "(Rd_64_Result = 'W') or (Rd_64_Result = 'L')";
-            teamLayer.queryFeatures(query, function(results){
-
-              for(i=0; i < results.features.length; i++){
-                teamObj = {};
-                teamObj.name = results.features[i].attributes.University;
-                teamObj.result = results.features[i].attributes.Rd_64_Result;
-                teamObj.venue = results.features[i].attributes.Rd_64_Venue;
-                teamObj.margin = results.features[i].attributes.Rd_64_Margin;
-                
-                //calculate distance  
-                for(j=0; j < venues.length; j++){
-                  if(venues[j].attributes.Name == teamObj.venue){
-                    var venueGeo = venues[j].geometry;
-                    var teamGeo = results.features[i].geometry;
-                    var dist = geometryEngine.distance(teamGeo, venueGeo, 9002);
-                    teamObj.distance = Math.round(dist / 5280);
-                    break;
-                  }
-                }
-                
-                teams.push(teamObj);
-              }
-              console.log("round 64 teams: ", teams);
-              return teams;
-            });
-          }
+          on(map, "click", function(){
+              ++clickCount;
+              if(clickCount === 1)
+                getDistances(teamFeatureLayer.graphics, venueFeatureLayer.graphics);
+          });
           
-          function generateTeams(){
-            var eachTeam = {};
-            for(i=0; i < teamLayer.graphics.length; i++){
-              eachTeam.name = teamLayer.graphics[i].attributes.University;
-              eachTeam.venues = [];
+          var teamCor, venueCor, sr, line, lineJSON;
+          
+          function getDistances(teamList, venueList){
+              console.log("function getDistances() called");
+            var teamPt, venuePt;  
               
+            for(i = 0; i < teamList.length; i++){
+//              console.log("team: ", teamList[i]);
+              teamPt = teamList[i].geometry;
+              teamCor = [teamPt.x, teamPt.y];
+              sr = teamPt.spatialReference;
+                
+              teamList[i].attributes.wins = 0;
+              teamList[i].potentialTravel = [];
+              teamList[i].actualTravel = [];
+              teamList[i].avgDistance = 0;
+              teamList[i].wins = 0;
+                
+              if(teamList[i].attributes.Rd_68_Venue == "UD Arena"){
+                 for(j = 0; j < venueList.length; j++){
+                     
+                  // console.log("Venue List: ", venueList[j]);
+                   if(venueList[j].attributes.Name == teamList[i].attributes.Rd_68_Venue){
+                    venuePt = venueList[j].geometry;
+                    //console.log("venue: ", venueList[j].attributes.Name);
+//                       console.log("team: ", teamList[i]);
+                    break;
+                   }
+                 }
+                  
+                venueCor = [venuePt.x, venuePt.y];
+                lineJSON = {
+                  paths: [[teamCor, venueCor]],
+                  spatialReference: sr
+                };
+                
+                line = new Polyline(lineJSON);
+                map.graphics.add(new Graphic(line, lineSymbol));
+                  
+//                console.log("line: ", line);
+                  
+               teamList[i].potentialTravel.push(line);
+               teamList[i].actualTravel.push(line);
+                  
+               if(teamList[i].attributes.Rd_68_Result == "W")
+                  teamList[i].wins += 1;
+                     
+            }
+            //Round of 64 and 32    
+            if(teamList[i].attributes.Rd_64_Result){
+                 for(j = 0; j < venueList.length; j++){
+                     
+                  // console.log("Venue List: ", venueList[j]);
+                   if(venueList[j].attributes.Name == teamList[i].attributes.Rd_64_Venue){
+                    venuePt = venueList[j].geometry;
+                    //console.log("venue: ", venueList[j].attributes.Name);
+//                       console.log("team: ", teamList[i]);
+                    break;
+                   }
+                 }
+                  
+                venueCor = [venuePt.x, venuePt.y];
+                lineJSON = {
+                  paths: [[teamCor, venueCor]],
+                  spatialReference: sr
+                };
+                
+                line = new Polyline(lineJSON);
+                map.graphics.add(new Graphic(line, lineSymbol));
+                  
+//                console.log("line: ", line);
+                  
+               teamList[i].potentialTravel.push(line);
+               teamList[i].actualTravel.push(line);
+                  
+               if(teamList[i].attributes.Rd_64_Result == "W")
+                  teamList[i].wins += 1;
+               if(teamList[i].attributes.Rd_32_Result == "W")
+                  teamList[i].wins += 1;
+                     
+              }
+            //Round of 16 and 8
+            if(teamList[i].attributes.Rd_16_Result){
+                 for(j = 0; j < venueList.length; j++){
+                     
+                  // console.log("Venue List: ", venueList[j]);
+                   if(venueList[j].attributes.Name == teamList[i].attributes.Rd_16_Venue){
+                    venuePt = venueList[j].geometry;
+                    //console.log("venue: ", venueList[j].attributes.Name);
+//                       console.log("team: ", teamList[i]);
+                    break;
+                   }
+                 }
+                  
+                venueCor = [venuePt.x, venuePt.y];
+                lineJSON = {
+                  paths: [[teamCor, venueCor]],
+                  spatialReference: sr
+                };
+                
+                line = new Polyline(lineJSON);
+                map.graphics.add(new Graphic(line, lineSymbol));
+                  
+//                console.log("line: ", line);
+                  
+               teamList[i].potentialTravel.push(line);
+               teamList[i].actualTravel.push(line);
+                  
+               if(teamList[i].attributes.Rd_16_Result == "W")
+                  teamList[i].wins += 1;
+               if(teamList[i].attributes.Rd_8_Result == "W")
+                  teamList[i].wins += 1;                
+                     
+              }
+            //Final Four
+            if(teamList[i].attributes.Rd_4_Result){
+                 for(j = 0; j < venueList.length; j++){
+                     
+                  // console.log("Venue List: ", venueList[j]);
+                   if(venueList[j].attributes.Name == teamList[i].attributes.Rd_4_Venue){
+                    venuePt = venueList[j].geometry;
+                    //console.log("venue: ", venueList[j].attributes.Name);
+//                       console.log("team: ", teamList[i]);
+                    break;
+                   }
+                 }
+                  
+                venueCor = [venuePt.x, venuePt.y];
+                lineJSON = {
+                  paths: [[teamCor, venueCor]],
+                  spatialReference: sr
+                };
+                
+                line = new Polyline(lineJSON);
+                map.graphics.add(new Graphic(line, lineSymbol));
+                  
+//                console.log("line: ", line);
+                  
+               teamList[i].potentialTravel.push(line);
+               teamList[i].actualTravel.push(line);
+                  
+               if(teamList[i].attributes.Rd_4_Result == "W")
+                  teamList[i].wins += 1;
+               if(teamList[i].attributes.Rd_2_Result == "W")
+                  teamList[i].wins += 1;                
+                     
+              }                
+             console.log("Team: ", teamList[i]);
             }
           }
-          
-          function getDistances(team){
-              var venues = [];
-              if(team.attributes.Rd_68_Venue == "UD Arena")
-                 //calculate distance to arena
-              if(team.attributes.Rd_64_Result)
-                  //calculate distance to arena
-              if(team.attributes.Rd_16_Result)
-                  //calculate distance to arena
-              if()
-                  //calculate distance to arena
-          }
-          
-//          function compileResults(round, teamResults){
-//              var team = {};
-//              if(round == 68){
-//                  for(i = 0; i < teamResults.length; i++){
-//                      team.name = teamResults[i].name;
-//                      team.venues = [];
-//                      team.venues.push(teamResults[i].venue);
-//                      team.distances = [];
-//                      team.distances.push(teamResults[i].distance);
-//                      
-//                      var dist = 0;
-//                      for(j=0; j<team.distances.length; j++){
-//                          dist += team.distances[j];
-//                      }
-//                      
-//                      team.avgDistance = dist / team.distances.length;
-//                      team.rd68 = teamResults[i].result;
-//                      team.wins = 0;
-//                      if(team.rd68 == "W")
-//                        team.wins++;
-//                      
-//                      finalResults.push(team);
-//                  }
-//              }
-//              console.log("final results: ", finalResults);
-//              return finalResults;
-//          }
           
       });
     </script>
