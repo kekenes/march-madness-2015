@@ -61,7 +61,7 @@
           });
           
           map.addLayers([teamFeatureLayer, venueFeatureLayer]);
-          
+          console.log("TeamLayer: ", teamFeatureLayer);
           on(map, "click", function(){
               ++clickCount;
               if(clickCount === 1)
@@ -70,23 +70,67 @@
           
           var teamCor, venueCor, sr, line, lineJSON;
           
+//          function createPointLayerDefinition(fields){
+//            var ld = {
+//              "geometryType": "esriGeometryPoint",
+//              "fields": fields
+//            };
+//            return ld;
+//          }
+          
+//          function createLineLayerDefinition(){
+//            var gt = "esriGeometryPolyline";
+//            var school = {
+//              "name": "Team",
+//              "type": "esriFieldTypeString",
+//              "alias": "Team"
+//            };
+//            var dist = {
+//              "name": "Distance",
+//              "type": "esriFieldTypeDouble",
+//              "alias": "Distance"            
+//            };
+//            var result = {
+//              "name": "Result",
+//              "type": "esriFieldTypeInteger",
+//              "alias": "Result"            
+//            };
+//              
+//            var ld = {
+//              "geometryType": gt,
+//              "fields": [school, dist, result]
+//            };
+//            
+//            return ld;
+//          }
+          
           function getDistances(teamList, venueList){
               console.log("function getDistances() called");
-            var teamPt, venuePt;  
-              
+            var teamPt, venuePt;
+//            var lineFeatureSet = {};
+//            var lineFeatureArray = [];
+//            var lineFeat = {};
+//            var att = {};
+//            var lineSR;
+            
             for(i = 0; i < teamList.length; i++){
+              teamFeatureLayer.graphics[i].attributes.wins = 0;
 //              console.log("team: ", teamList[i]);
               teamPt = teamList[i].geometry;
               teamCor = [teamPt.x, teamPt.y];
               sr = teamPt.spatialReference;
+//              lineSR = sr;
+              var distance = 0;
                 
               teamList[i].attributes.wins = 0;
               teamList[i].potentialTravel = [];
               teamList[i].actualTravel = [];
+              teamList[i].distances = [];
               teamList[i].avgDistance = 0;
               teamList[i].wins = 0;
                 
               if(teamList[i].attributes.Rd_68_Venue == "UD Arena"){
+//                 lineFeat = {};
                  for(j = 0; j < venueList.length; j++){
                      
                   // console.log("Venue List: ", venueList[j]);
@@ -106,14 +150,38 @@
                 
                 line = new Polyline(lineJSON);
                 map.graphics.add(new Graphic(line, lineSymbol));
-                  
+                distance = geometryEngine.geodesicLength(line, 9093);
+                teamList[i].distances.push(distance);
+                teamList[i].avgDistance += distance;
 //                console.log("line: ", line);
                   
                teamList[i].potentialTravel.push(line);
                teamList[i].actualTravel.push(line);
                   
-               if(teamList[i].attributes.Rd_68_Result == "W")
+//               teamFeatureLayer.graphics[i].attributes.Rd_68_Distance = distance;
+                  
+//               att.Team = teamList[i].attributes.University;
+//               att.Distance = distance;
+                  
+               if(teamList[i].attributes.Rd_68_Result == "W")//{
                   teamList[i].wins += 1;
+//                  r = 1;
+//               }
+//               else{
+//                  r = 0;
+//               }
+              
+//               lineFeat.attributes = att;
+//               lineFeat.geometry = line;
+                
+//               lineFeatureArray.push({
+//                 "attributes": {
+//                   "Team": teamList[i].attributes.University,
+//                   "Distance": distance,
+//                   "Result": r
+//                 },
+//                 "geometry": new Polyline(lineJSON)
+//               });
                      
             }
             //Round of 64 and 32    
@@ -137,7 +205,11 @@
                 
                 line = new Polyline(lineJSON);
                 map.graphics.add(new Graphic(line, lineSymbol));
-                  
+                distance = geometryEngine.geodesicLength(line, 9093);
+                teamList[i].distances.push(distance);
+                teamList[i].avgDistance += distance;
+               teamFeatureLayer.graphics[i].attributes.Rd_64_Distance = distance;                
+               teamFeatureLayer.graphics[i].attributes.Rd_32_Distance = distance;                  
 //                console.log("line: ", line);
                   
                teamList[i].potentialTravel.push(line);
@@ -170,7 +242,13 @@
                 
                 line = new Polyline(lineJSON);
                 map.graphics.add(new Graphic(line, lineSymbol));
-                  
+                distance = geometryEngine.geodesicLength(line, 9093);
+                teamList[i].distances.push(distance);
+                teamList[i].avgDistance += distance;
+                
+               teamFeatureLayer.graphics[i].attributes.Rd_16_Distance = distance;                
+               teamFeatureLayer.graphics[i].attributes.Rd_8_Distance = distance;                
+                
 //                console.log("line: ", line);
                   
                teamList[i].potentialTravel.push(line);
@@ -203,6 +281,12 @@
                 
                 line = new Polyline(lineJSON);
                 map.graphics.add(new Graphic(line, lineSymbol));
+                distance = geometryEngine.geodesicLength(line, 9093);
+                teamList[i].distances.push(distance);       
+                teamList[i].avgDistance += distance; 
+                
+                teamFeatureLayer.graphics[i].attributes.Rd_4_Distance = distance;                
+                teamFeatureLayer.graphics[i].attributes.Rd_2_Distance = distance;                
                   
 //                console.log("line: ", line);
                   
@@ -214,9 +298,64 @@
                if(teamList[i].attributes.Rd_2_Result == "W")
                   teamList[i].wins += 1;                
                      
+              }
+                
+              if(teamFeatureLayer.graphics[i].attributes.Rd_68_Result == "W")
+                  teamFeatureLayer.graphics[i].attributes.wins++;
+              if(teamFeatureLayer.graphics[i].attributes.Rd_64_Result == "W")
+                  teamFeatureLayer.graphics[i].attributes.wins++;                
+              if(teamFeatureLayer.graphics[i].attributes.Rd_32_Result == "W")
+                  teamFeatureLayer.graphics[i].attributes.wins++;             
+              if(teamFeatureLayer.graphics[i].attributes.Rd_16_Result == "W")
+                  teamFeatureLayer.graphics[i].attributes.wins++;                
+              if(teamFeatureLayer.graphics[i].attributes.Rd_8_Result == "W")
+                  teamFeatureLayer.graphics[i].attributes.wins++;
+              if(teamFeatureLayer.graphics[i].attributes.Rd_4_Result == "W")
+                  teamFeatureLayer.graphics[i].attributes.wins++;                
+              if(teamFeatureLayer.graphics[i].attributes.Rd_2_Result == "W")
+                  teamFeatureLayer.graphics[i].attributes.wins++;
+              
+              var totDist = 0;
+              var totDistCount = 0;
+              if(teamFeatureLayer.graphics[i].attributes.Rd_68_Distance){
+                  totDist += teamFeatureLayer.graphics[i].attributes.Rd_68_Distance;
+                  totDistCount++;
+              }
+              if(teamFeatureLayer.graphics[i].attributes.Rd_64_Distance){
+                  totDist += teamFeatureLayer.graphics[i].attributes.Rd_64_Distance;
+                  totDistCount++;
               }                
-             console.log("Team: ", teamList[i]);
+              if(teamFeatureLayer.graphics[i].attributes.Rd_16_Distance){
+                  totDist += teamFeatureLayer.graphics[i].attributes.Rd_16_Distance;
+                  totDistCount++;
+              }              
+              if(teamFeatureLayer.graphics[i].attributes.Rd_4_Distance){
+                  totDist += teamFeatureLayer.graphics[i].attributes.Rd_4_Distance;
+                  totDistCount++;
+              }          
+                
+             teamFeatureLayer.graphics[i].attributes.avgDistance = Math.round(totDist / totDistCount);   
+                
+             teamList[i].avgDistance = Math.round(teamList[i].avgDistance / teamList[i].distances.length);
             }
+//              
+//            lineFeatureSet.features = lineFeatureArray;
+//            lineFeatureSet.geometryType = "esriGeometryPolyline";
+//            lineFeatureSet.spatialReference = lineSR;
+              
+//            var lineLayDef = createLineLayerDefinition();
+//            console.log("line feature array: ", lineFeatureArray);
+//            console.log("line feature set: ", lineFeatureSet);
+//            console.log("line layer def: ", lineLayDef);
+//            var travelLayer = new FeatureLayer({
+//              featureSet: lineFeatureSet,
+//              layerDefinition: lineLayDef
+//            });
+            
+//            map.addLayer(travelLayer);
+//            console.log("Travel layer: ", travelLayer);
+//            console.log("team list: ", teamList);
+            console.log("team layer: ", teamFeatureLayer);
           }
           
       });
