@@ -28,7 +28,9 @@
                "esri/layers/FeatureLayer",
                "esri/layers/GraphicsLayer",
                "esri/graphic",
-               "esri/renderers/smartMapping",
+               "esri/symbols/Symbol",
+               "esri/renderers/SimpleRenderer",
+               "esri/renderers/ClassBreaksRenderer",
                "esri/geometry/Polyline",
                "esri/geometry/Point",
                "esri/symbols/SimpleMarkerSymbol",
@@ -40,7 +42,7 @@
                "esri/urlUtils",
                "dojo/on",
                "dojo/domReady!"], 
-              function(Map, FeatureLayer, GraphicsLayer, Graphic, smartMapping, Polyline, Point, SimpleMarkerSymbol, SimpleLineSymbol, Color, geometryEngine, Query, arcgisUtils, urlUtils, on) {
+              function(Map, FeatureLayer, GraphicsLayer, Graphic, Symbol, SimpleRenderer, ClassBreaksRenderer, Polyline, Point, SimpleMarkerSymbol, SimpleLineSymbol, Color, geometryEngine, Query, arcgisUtils, urlUtils, on) {
           
           var teamFeatureLayer = new FeatureLayer("http://services.arcgis.com/V6ZHFr6zdgNZuVG0/arcgis/rest/services/NCAA_Tourney_2015/FeatureServer/1", {
           mode: FeatureLayer.MODE_ONDEMAND,
@@ -53,9 +55,19 @@
           var lineSymbol = new SimpleLineSymbol(SimpleLineSymbol.STYLE_SOLID, new Color([0,0,0], 0.5), 2);
           var pointSymbol = new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_CIRCLE, 15, lineSymbol, new Color([255,0,0,1]));
           
+          var ptBreak0 = new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_CIRCLE, 2, lineSymbol, new Color([255,0,0,1]));
+          var ptBreak1 = new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_CIRCLE, 4, lineSymbol, new Color([255,0,0,1]));
+        var ptBreak2 = new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_CIRCLE, 8, lineSymbol, new Color([255,0,0,1]));
+           var ptBreak3 = new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_CIRCLE, 16, lineSymbol, new Color([255,0,0,1]));
+           var ptBreak4 = new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_CIRCLE, 32, lineSymbol, new Color([255,0,0,1]));
+           var ptBreak5 = new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_CIRCLE, 64, lineSymbol, new Color([255,0,0,1]));
+           var ptBreak6 = new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_CIRCLE, 128, lineSymbol, new Color([255,0,0,1]));
+          
           var travelLayer = new GraphicsLayer({
-              dataAttributes: ["Ttam", "distance", "wins"]
+              dataAttributes: ["team", "distance", "wins"]
           });
+          
+          var teamResultLayer = new GraphicsLayer();
 
           map = new Map("map", {
             basemap: "dark-gray",
@@ -65,10 +77,13 @@
           
           map.addLayers([teamFeatureLayer, venueFeatureLayer]);
           console.log("TeamLayer: ", teamFeatureLayer);
+          
           on(map, "click", function(){
               ++clickCount;
               if(clickCount === 1)
                 getDistances(teamFeatureLayer.graphics, venueFeatureLayer.graphics);
+              if(clickCount === 2)
+                  displayData();
           });
           
           var teamCor, venueCor, sr, line, lineJSON;
@@ -82,17 +97,24 @@
               teamCor = [teamPt.x, teamPt.y];
               sr = teamPt.spatialReference;
               var distance = 0;
+                  
+                lineAtt = {};                
+                teamAtt = teamList[i].attributes;
+                teamAtt.wins = 0;
                 
-              teamList[i].attributes.wins = 0;
-              teamList[i].potentialTravel = [];
-              teamList[i].actualTravel = [];
-              teamList[i].distances = [];
-              teamList[i].avgDistance = 0;
-              teamList[i].wins = 0;
+//              teamList[i].attributes.wins = 0;
+//              teamList[i].potentialTravel = [];
+//              teamList[i].actualTravel = [];
+//              teamList[i].distances = [];
+//              teamList[i].avgDistance = 0;
+//              teamList[i].wins = 0; 
+                
+                lineAtt.team = teamFeatureLayer.graphics[i].attributes.University;
                 
               if(teamList[i].attributes.Rd_68_Venue == "UD Arena"){
 
-                  lineAtt = {};
+
+
 
                  for(j = 0; j < venueList.length; j++){
                    if(venueList[j].attributes.Name == teamList[i].attributes.Rd_68_Venue){
@@ -110,18 +132,22 @@
                 line = new Polyline(lineJSON);
 
                 distance = geometryEngine.geodesicLength(line, 9093);
-                teamList[i].distances.push(distance);
-                teamList[i].avgDistance += distance;
+//                teamList[i].distances.push(distance);
+//                teamList[i].avgDistance += distance;
 
-               teamList[i].potentialTravel.push(line);
-               teamList[i].actualTravel.push(line);
+//               teamList[i].potentialTravel.push(line);
+//               teamList[i].actualTravel.push(line);
+                
+                  teamAtt.Rd68_travel = new Graphic(line, lineSymbol);
+                  teamAtt.Rd68_distance = distance;
                   
                   
-                lineAtt.team = teamFeatureLayer.graphics[i].attributes.University;
+                
                 lineAtt.distance = distance;
                   
                if(teamList[i].attributes.Rd_68_Result == "W"){
-                  teamList[i].wins += 1;
+//                  teamList[i].wins += 1;
+                   teamAtt.wins++;
                   lineAtt.wins = 1;
                }
                else{
@@ -149,20 +175,25 @@
                 
                 line = new Polyline(lineJSON);
 
-                travelLayer.add(new Graphic(line, lineSymbol));
                 distance = geometryEngine.geodesicLength(line, 9093);
-                teamList[i].distances.push(distance);
-                teamList[i].avgDistance += distance;
-               teamFeatureLayer.graphics[i].attributes.Rd_64_Distance = distance;                
-               teamFeatureLayer.graphics[i].attributes.Rd_32_Distance = distance;                  
-                  
-               teamList[i].potentialTravel.push(line);
-               teamList[i].actualTravel.push(line);
-                  
-               if(teamList[i].attributes.Rd_64_Result == "W")
-                  teamList[i].wins += 1;
-               if(teamList[i].attributes.Rd_32_Result == "W")
-                  teamList[i].wins += 1;
+                
+                  teamAtt.Rd64_travel = new Graphic(line, lineSymbol);
+                  teamAtt.Rd64_distance = distance; 
+                
+                lineAtt.distance = distance;
+
+               if(teamList[i].attributes.Rd_64_Result == "W"){
+                  lineAtt.wins = 1;
+                  teamAtt.wins++;
+               }
+               if(teamList[i].attributes.Rd_32_Result == "W"){
+                  lineAtt.wins = 2;
+                  teamAtt.wins++;
+               }
+               if(teamList[i].attributes.Rd_64_Result == "L")
+                   lineAtt.wins = 0;
+
+                travelLayer.add(new Graphic(line, lineSymbol, lineAtt));                
                      
               }
             //Round of 16 and 8
@@ -182,21 +213,36 @@
                 };
                 
                 line = new Polyline(lineJSON);
-                travelLayer.add(new Graphic(line, lineSymbol));
+                
                 distance = geometryEngine.geodesicLength(line, 9093);
-                teamList[i].distances.push(distance);
-                teamList[i].avgDistance += distance;
+                teamAtt.Rd16_travel = new Graphic(line, lineSymbol);
+                teamAtt.Rd16_distance = distance;
                 
-               teamFeatureLayer.graphics[i].attributes.Rd_16_Distance = distance;                
-               teamFeatureLayer.graphics[i].attributes.Rd_8_Distance = distance;                
+                lineAtt.distance = distance;
+//                teamList[i].distances.push(distance);
+//                teamList[i].avgDistance += distance;
                 
-               teamList[i].potentialTravel.push(line);
-               teamList[i].actualTravel.push(line);
+//               teamFeatureLayer.graphics[i].attributes.Rd_16_Distance = distance;                
+//               teamFeatureLayer.graphics[i].attributes.Rd_8_Distance = distance;                
+//                
+//               teamList[i].potentialTravel.push(line);
+//               teamList[i].actualTravel.push(line);
                   
-               if(teamList[i].attributes.Rd_16_Result == "W")
-                  teamList[i].wins += 1;
-               if(teamList[i].attributes.Rd_8_Result == "W")
-                  teamList[i].wins += 1;                
+               if(teamList[i].attributes.Rd_16_Result == "W"){
+                   teamAtt.wins++;
+                   lineAtt.wins = 1;
+//                  teamList[i].wins += 1;
+               }
+               if(teamList[i].attributes.Rd_8_Result == "W"){
+                   teamAtt.wins++;
+                   lineAtt.wins = 2;
+//                  teamList[i].wins += 1;
+               }
+               if(teamList[i].attributes.Rd_16_Result == "L")
+                   lineAtt.wins = 0;
+                  
+                
+                travelLayer.add(new Graphic(line, lineSymbol, lineAtt));
                      
               }
             //Final Four
@@ -216,72 +262,114 @@
                 };
                 
                 line = new Polyline(lineJSON);
-                travelLayer.add(new Graphic(line, lineSymbol));
-                distance = geometryEngine.geodesicLength(line, 9093);
-                teamList[i].distances.push(distance);       
-                teamList[i].avgDistance += distance; 
                 
-                teamFeatureLayer.graphics[i].attributes.Rd_4_Distance = distance;                
-                teamFeatureLayer.graphics[i].attributes.Rd_2_Distance = distance;                
+                distance = geometryEngine.geodesicLength(line, 9093);
+                
+                teamAtt.Rd4_travel = new Graphic(line, lineAtt);
+                teamAtt.Rd4_distance = distance;
+                
+                lineAtt.distance = distance;
+//                teamList[i].distances.push(distance);       
+//                teamList[i].avgDistance += distance; 
+//                
+//                teamFeatureLayer.graphics[i].attributes.Rd_4_Distance = distance;                
+//                teamFeatureLayer.graphics[i].attributes.Rd_2_Distance = distance;                
                   
-               teamList[i].potentialTravel.push(line);
-               teamList[i].actualTravel.push(line);
+//               teamList[i].potentialTravel.push(line);
+//               teamList[i].actualTravel.push(line);
                   
-               if(teamList[i].attributes.Rd_4_Result == "W")
-                  teamList[i].wins += 1;
-               if(teamList[i].attributes.Rd_2_Result == "W")
-                  teamList[i].wins += 1;                
+               if(teamList[i].attributes.Rd_4_Result == "W"){
+                   teamAtt++;
+//                  teamList[i].wins += 1;
+                   lineAtt.wins = 1;
+               }
+               if(teamList[i].attributes.Rd_2_Result == "W"){
+                   teamAtt++;
+//                  teamList[i].wins += 1;
+                   lineAtt.wins = 2;
+               }
+               if(teamList[i].attributes.Rd_4_Result == "L")
+                   lineAtt.wins = 0;
+                
+                travelLayer.add(new Graphic(line, lineSymbol, lineAtt));
                      
               }
-                
-              if(teamFeatureLayer.graphics[i].attributes.Rd_68_Result == "W")
-                  teamFeatureLayer.graphics[i].attributes.wins++;
-              if(teamFeatureLayer.graphics[i].attributes.Rd_64_Result == "W")
-                  teamFeatureLayer.graphics[i].attributes.wins++;                
-              if(teamFeatureLayer.graphics[i].attributes.Rd_32_Result == "W")
-                  teamFeatureLayer.graphics[i].attributes.wins++;             
-              if(teamFeatureLayer.graphics[i].attributes.Rd_16_Result == "W")
-                  teamFeatureLayer.graphics[i].attributes.wins++;                
-              if(teamFeatureLayer.graphics[i].attributes.Rd_8_Result == "W")
-                  teamFeatureLayer.graphics[i].attributes.wins++;
-              if(teamFeatureLayer.graphics[i].attributes.Rd_4_Result == "W")
-                  teamFeatureLayer.graphics[i].attributes.wins++;                
-              if(teamFeatureLayer.graphics[i].attributes.Rd_2_Result == "W")
-                  teamFeatureLayer.graphics[i].attributes.wins++;
               
-              var totDist = 0;
-              var totDistCount = 0;
-              if(teamFeatureLayer.graphics[i].attributes.Rd_68_Distance){
-                  totDist += teamFeatureLayer.graphics[i].attributes.Rd_68_Distance;
-                  totDistCount++;
+            teamAtt.totDist = 0;    
+            var distCount = 0;
+              if(teamAtt.Rd68_distance){
+                  teamAtt.totDist += teamAtt.Rd68_distance;
+                  distCount++;
               }
-              if(teamFeatureLayer.graphics[i].attributes.Rd_64_Distance){
-                  totDist += teamFeatureLayer.graphics[i].attributes.Rd_64_Distance;
-                  totDistCount++;
-              }                
-              if(teamFeatureLayer.graphics[i].attributes.Rd_16_Distance){
-                  totDist += teamFeatureLayer.graphics[i].attributes.Rd_16_Distance;
-                  totDistCount++;
-              }              
-              if(teamFeatureLayer.graphics[i].attributes.Rd_4_Distance){
-                  totDist += teamFeatureLayer.graphics[i].attributes.Rd_4_Distance;
-                  totDistCount++;
-              }          
+              if(teamAtt.Rd64_distance){
+                  teamAtt.totDist += teamAtt.Rd64_distance;
+                  distCount++;
+              }
+              if(teamAtt.Rd16_distance){
+                  teamAtt.totDist += teamAtt.Rd16_distance;
+                  distCount++;
+              }
+              if(teamAtt.Rd4_distance){
+                  teamAtt.totDist += teamAtt.Rd4_distance;
+                  distCount++;
+              }
                 
-             teamFeatureLayer.graphics[i].attributes.avgDistance = Math.round(totDist / totDistCount);   
+             teamAtt.avgDistance = Math.round(teamAtt.totDist / distCount); 
                 
-             teamList[i].avgDistance = Math.round(teamList[i].avgDistance / teamList[i].distances.length);
+             teamResultLayer.add(new Graphic(teamPt, pointSymbol, teamAtt));
+                
             }
               
+//              map.addLayer(teamResultLayer);
               map.addLayer(travelLayer);
-              console.log("team results layer: ", travelLayer);
+              console.log("travel layer: ", travelLayer);
+              console.log("team result layer: ", teamResultLayer);
 
-            console.log("team layer: ", teamFeatureLayer);
-//              displayData();
+            console.log("team feature layer: ", teamFeatureLayer);
+             // displayData();
           }
           
           function displayData(){
-              console.log("displayData called.");
+              console.log("displayData called. Layer: ", teamResultLayer);
+              var teamWinRenderer = new ClassBreaksRenderer(pointSymbol, function(feature){
+                  console.log("feature in renderer: ", feature);
+                return feature.attributes.wins;
+              });
+              teamWinRenderer.addBreak(0, 0, ptBreak0);
+              teamWinRenderer.addBreak(1, 1, ptBreak1);
+              teamWinRenderer.addBreak(2, 2, ptBreak2);
+              teamWinRenderer.addBreak(3, 3, ptBreak3);
+              teamWinRenderer.addBreak(4, 4, ptBreak4);
+              teamWinRenderer.addBreak(5, 5, ptBreak5);
+              teamWinRenderer.addBreak(6, 6, ptBreak6);
+//              var teamWinRenderer = new SimpleRenderer(pointSymbol);
+//              teamWinRenderer.setSizeInfo({
+//                field: "wins",
+//                minSize: 2,
+//                maxSize: 200,
+//                minDataValue: 0,
+//                maxDataValue: 6
+//              });
+              
+
+              
+              teamResultLayer.setRenderer(teamWinRenderer);
+              teamResultLayer.redraw();
+//              map.addLayer(teamResultLayer);
+              
+//              console.log("team win renderrer size info: ", teamWinRenderer.sizeInfo);
+//              
+//              var travelWinRenderer = new SimpleRenderer(lineSymbol);
+//              travelWinRenderer.setSizeInfo({
+//                field: "wins",
+//                minSize: 1,
+//                maxSize: 30,
+//                minDataValue: 0,
+//                maxDataValue: 2
+//              });
+              
+//              travelLayer.setRenderer(travelWinRenderer);
+//              travelLayer.redraw();
 
           }
           
