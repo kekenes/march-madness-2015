@@ -68,6 +68,9 @@
           });
           
           var teamResultLayer = new GraphicsLayer();
+          
+          var teamTravelLayerHover = new GraphicsLayer();
+          var teamTravelLayer = new GraphicsLayer();
 
           map = new Map("map", {
             basemap: "dark-gray",
@@ -75,10 +78,11 @@
             zoom: 4
           });
           
-          map.addLayers([teamFeatureLayer, venueFeatureLayer]);
+          map.addLayers([teamFeatureLayer, venueFeatureLayer, teamTravelLayerHover]);
           console.log("TeamLayer: ", teamFeatureLayer);
           
           on(map, "click", function(){
+              teamTravelLayer.clear();
               ++clickCount;
               if(clickCount === 1)
                 getDistances(teamFeatureLayer.graphics, venueFeatureLayer.graphics);
@@ -102,19 +106,9 @@
                 teamAtt = teamList[i].attributes;
                 teamAtt.wins = 0;
                 
-//              teamList[i].attributes.wins = 0;
-//              teamList[i].potentialTravel = [];
-//              teamList[i].actualTravel = [];
-//              teamList[i].distances = [];
-//              teamList[i].avgDistance = 0;
-//              teamList[i].wins = 0; 
-                
                 lineAtt.team = teamFeatureLayer.graphics[i].attributes.University;
                 
               if(teamList[i].attributes.Rd_68_Venue == "UD Arena"){
-
-
-
 
                  for(j = 0; j < venueList.length; j++){
                    if(venueList[j].attributes.Name == teamList[i].attributes.Rd_68_Venue){
@@ -132,14 +126,8 @@
                 line = new Polyline(lineJSON);
 
                 distance = geometryEngine.geodesicLength(line, 9093);
-//                teamList[i].distances.push(distance);
-//                teamList[i].avgDistance += distance;
+                distance = Math.round(distance);
 
-//               teamList[i].potentialTravel.push(line);
-//               teamList[i].actualTravel.push(line);
-                
-                  teamAtt.Rd68_travel = new Graphic(line, lineSymbol);
-                  teamAtt.Rd68_distance = distance;
                   
                   
                 
@@ -153,6 +141,8 @@
                else{
                   lineAtt.wins = 0;
                }
+            teamAtt.Rd68_travel = new Graphic(line, lineSymbol, {distance: distance, wins: lineAtt.wins});
+            teamAtt.Rd68_distance = distance;                  
               
               travelLayer.add(new Graphic(line, lineSymbol, lineAtt));  
                      
@@ -176,9 +166,8 @@
                 line = new Polyline(lineJSON);
 
                 distance = geometryEngine.geodesicLength(line, 9093);
-                
-                  teamAtt.Rd64_travel = new Graphic(line, lineSymbol);
-                  teamAtt.Rd64_distance = distance; 
+                distance = Math.round(distance);
+
                 
                 lineAtt.distance = distance;
 
@@ -193,7 +182,10 @@
                if(teamList[i].attributes.Rd_64_Result == "L")
                    lineAtt.wins = 0;
 
-                travelLayer.add(new Graphic(line, lineSymbol, lineAtt));                
+                travelLayer.add(new Graphic(line, lineSymbol, lineAtt)); 
+                
+                teamAtt.Rd64_travel = new Graphic(line, lineSymbol, {distance: distance, wins: lineAtt.wins});
+                  teamAtt.Rd64_distance = distance; 
                      
               }
             //Round of 16 and 8
@@ -215,18 +207,10 @@
                 line = new Polyline(lineJSON);
                 
                 distance = geometryEngine.geodesicLength(line, 9093);
-                teamAtt.Rd16_travel = new Graphic(line, lineSymbol);
-                teamAtt.Rd16_distance = distance;
+                distance = Math.round(distance);
                 
                 lineAtt.distance = distance;
-//                teamList[i].distances.push(distance);
-//                teamList[i].avgDistance += distance;
-                
-//               teamFeatureLayer.graphics[i].attributes.Rd_16_Distance = distance;                
-//               teamFeatureLayer.graphics[i].attributes.Rd_8_Distance = distance;                
-//                
-//               teamList[i].potentialTravel.push(line);
-//               teamList[i].actualTravel.push(line);
+
                   
                if(teamList[i].attributes.Rd_16_Result == "W"){
                    teamAtt.wins++;
@@ -241,6 +225,8 @@
                if(teamList[i].attributes.Rd_16_Result == "L")
                    lineAtt.wins = 0;
                   
+                teamAtt.Rd16_travel = new Graphic(line, lineSymbol, {distance: distance, wins: lineAtt.wins});
+                teamAtt.Rd16_distance = distance;                
                 
                 travelLayer.add(new Graphic(line, lineSymbol, lineAtt));
                      
@@ -264,19 +250,11 @@
                 line = new Polyline(lineJSON);
                 
                 distance = geometryEngine.geodesicLength(line, 9093);
-                
-                teamAtt.Rd4_travel = new Graphic(line, lineAtt);
-                teamAtt.Rd4_distance = distance;
+                distance = Math.round(distance);
+
                 
                 lineAtt.distance = distance;
-//                teamList[i].distances.push(distance);       
-//                teamList[i].avgDistance += distance; 
-//                
-//                teamFeatureLayer.graphics[i].attributes.Rd_4_Distance = distance;                
-//                teamFeatureLayer.graphics[i].attributes.Rd_2_Distance = distance;                
-                  
-//               teamList[i].potentialTravel.push(line);
-//               teamList[i].actualTravel.push(line);
+
                   
                if(teamList[i].attributes.Rd_4_Result == "W"){
                    teamAtt++;
@@ -290,6 +268,9 @@
                }
                if(teamList[i].attributes.Rd_4_Result == "L")
                    lineAtt.wins = 0;
+                
+                teamAtt.Rd4_travel = new Graphic(line, lineAtt, {distance: distance, wins: lineAtt.wins});
+                teamAtt.Rd4_distance = distance;
                 
                 travelLayer.add(new Graphic(line, lineSymbol, lineAtt));
                      
@@ -320,8 +301,8 @@
                 
             }
               
-//              map.addLayer(teamResultLayer);
-              map.addLayer(travelLayer);
+              map.addLayer(teamResultLayer);
+//              map.addLayer(travelLayer);
               console.log("travel layer: ", travelLayer);
               console.log("team result layer: ", teamResultLayer);
 
@@ -372,6 +353,40 @@
 //              travelLayer.redraw();
 
           }
+          
+          on(teamResultLayer, "mouse-over", function(evt){
+//              console.log(evt);
+//              teamTravelLayerHover.clear();
+              if(evt.graphic.attributes.Rd68_travel)
+                teamTravelLayerHover.add(evt.graphic.attributes.Rd68_travel);
+              if(evt.graphic.attributes.Rd64_travel)
+                teamTravelLayerHover.add(evt.graphic.attributes.Rd64_travel);
+              if(evt.graphic.attributes.Rd16_travel)
+                teamTravelLayerHover.add(evt.graphic.attributes.Rd16_travel);
+              if(evt.graphic.attributes.Rd4_travel)
+                teamTravelLayerHover.add(evt.graphic.attributes.Rd4_travel);
+              
+              teamTravelLayerHover.redraw();
+          });
+
+          on(teamResultLayer, "click", function(evt){
+//              teamTravelLayer.clear();
+              if(evt.graphic.attributes.Rd68_travel)
+                teamTravelLayer.add(evt.graphic.attributes.Rd68_travel);
+              if(evt.graphic.attributes.Rd64_travel)
+                teamTravelLayer.add(evt.graphic.attributes.Rd64_travel);
+              if(evt.graphic.attributes.Rd16_travel)
+                teamTravelLayer.add(evt.graphic.attributes.Rd16_travel);
+              if(evt.graphic.attributes.Rd4_travel)
+                teamTravelLayer.add(evt.graphic.attributes.Rd4_travel);
+              
+              map.addLayer(teamTravelLayer);
+//              teamTravelLayer.redraw();
+          });
+          
+          on(teamResultLayer, "mouse-out", function(evt){
+                teamTravelLayerHover.clear();
+          });
           
       });
     </script>
