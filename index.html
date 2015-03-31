@@ -5,6 +5,8 @@
     <meta name="viewport" content="initial-scale=1, maximum-scale=1,user-scalable=no"/>
     <title>2015 NCAA Men's Basketball Tournament</title>
     <link rel="stylesheet" href="http://js.arcgis.com/3.13/esri/css/esri.css">
+      <!-- Latest compiled and minified Bootstrap CSS -->
+      <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
     <style>
       html, body, #map {
         height: 100%;
@@ -17,6 +19,15 @@
         overflow: hidden;
         font-family: "Trebuchet MS";
       }
+      #menu{
+/*         background-color: #FFF;   */
+          z-index: 99;
+          left: 20px;
+          top: 100px;
+          width: 200px;
+          height: 600px;
+          position: absolute;
+        }
     </style>
     <script src="http://js.arcgis.com/3.13/"></script>
     <script>
@@ -31,6 +42,7 @@
                "esri/symbols/Symbol",
                "esri/renderers/SimpleRenderer",
                "esri/renderers/ClassBreaksRenderer",
+               "esri/renderers/smartMapping",
                "esri/geometry/Polyline",
                "esri/geometry/Point",
                "esri/symbols/SimpleMarkerSymbol",
@@ -40,9 +52,10 @@
                "esri/tasks/query",
                "esri/arcgis/utils",
                "esri/urlUtils",
+               "dojo/dom",
                "dojo/on",
                "dojo/domReady!"], 
-              function(Map, FeatureLayer, GraphicsLayer, Graphic, Symbol, SimpleRenderer, ClassBreaksRenderer, Polyline, Point, SimpleMarkerSymbol, SimpleLineSymbol, Color, geometryEngine, Query, arcgisUtils, urlUtils, on) {
+              function(Map, FeatureLayer, GraphicsLayer, Graphic, Symbol, SimpleRenderer, ClassBreaksRenderer, smartMapping, Polyline, Point, SimpleMarkerSymbol, SimpleLineSymbol, Color, geometryEngine, Query, arcgisUtils, urlUtils, dom, on) {
           
           var teamFeatureLayer = new FeatureLayer("http://services.arcgis.com/V6ZHFr6zdgNZuVG0/arcgis/rest/services/NCAA_Tourney_2015/FeatureServer/1", {
           mode: FeatureLayer.MODE_ONDEMAND,
@@ -78,7 +91,7 @@
             zoom: 4
           });
           
-          map.addLayers([teamFeatureLayer, venueFeatureLayer, teamTravelLayerHover]);
+          map.addLayers([venueFeatureLayer, teamTravelLayerHover]);
           console.log("TeamLayer: ", teamFeatureLayer);
           
           on(map, "click", function(){
@@ -353,7 +366,7 @@
 //              travelLayer.redraw();
 
           }
-          
+
           on(teamResultLayer, "mouse-over", function(evt){
 //              console.log(evt);
 //              teamTravelLayerHover.clear();
@@ -388,11 +401,66 @@
                 teamTravelLayerHover.clear();
           });
           
+          on(dom.byId("allTeamButton"), "click", function(evt){
+              console.log("button evt: ", evt);
+              teamFilter(evt);
+          });
+          on(dom.byId("R16TeamButton"), "click", function(evt){
+              console.log("button evt: ", evt);
+              teamFilter(evt);
+          });
+          
+          function teamFilter(btnEvt){
+              var expression;
+              if(btnEvt.srcElement.id == "R16TeamButton"){
+                 expression = "Rd32_Result='W'";
+              }
+              console.log("expression: ", expression);
+              teamFeatureLayer.setDefinitionExpression(expression);
+              map.addLayer(teamFeatureLayer);
+//              setTeamHeatmapRenderer();
+          }
+          
+          function setTeamHeatmapRenderer(){
+              console.log("setTeamHeatmapRenderer called");
+              smartMapping.createHeatmapRenderer({
+                  basemap: "dark-gray",
+                  blurRadius: 18,
+                  fadeToTransparent: false,
+                  //field:
+                  layer: teamFeatureLayer,
+                  maxRatio: 1,
+                  minRatio: 0.4
+              }).then(function(response){
+                  teamFeatureLayer.setRenderer(response.renderer);
+                  teamFeatureLayer.redraw();
+              });
+          }
+          
       });
     </script>
   </head>
 
   <body>
-    <div id="map"></div>
+
+    <div id="map">
+        <div id="menu" class="panel panel-default">
+            <div class="panel-heading">
+              <h3 class="panel-title">View results by round</h3>
+            </div>
+            <div class="panel-body"> 
+                <button id="allTeamButton" class="btn btn-sm btn-primary">All Teams</button><br>
+                <button id="R68TeamButton" class="btn btn-sm btn-primary">First Four</button><br>
+                <button id="R64TeamButton" class="btn btn-sm btn-primary">Round of 64</button><br>
+                <button id="R32TeamButton" class="btn btn-sm btn-primary">Round of 32</button><br>
+                <button id="R16TeamButton" class="btn btn-sm btn-primary">Sweet 16</button><br>
+                <button id="R8TeamButton" class="btn btn-sm btn-primary">Elite 8</button><br>
+                <button id="R4TeamButton" class="btn btn-sm btn-primary">Final 4</button><br>
+                <button id="R2TeamButton" class="btn btn-sm btn-primary">Championship</button><br>
+            </div>
+        </div>
+   </div>
+
+    
   </body>
 </html>
