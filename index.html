@@ -65,12 +65,22 @@
           mode: FeatureLayer.MODE_ONDEMAND,
           outFields: ["*"]          
           });
+          console.log("teamfl: ", teamFeatureLayer);
+//        var sweet16FL = new FeatureLayer("http://services.arcgis.com/V6ZHFr6zdgNZuVG0/arcgis/rest/services/NCAA_Tourney_2015/FeatureServer/1", {
+//          mode: FeatureLayer.MODE_SNAPSHOT,
+//          outFields: ["*"]
+//          });
+//          sweet16FL.setDefinitionExpression("Rd_32_Result='W'");
+//          map.addLayer(sweet16FL);
+          
+          
+          
           var lineSymbol = new SimpleLineSymbol(SimpleLineSymbol.STYLE_SOLID, new Color([0,0,0], 0.5), 2);
           var pointSymbol = new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_CIRCLE, 15, lineSymbol, new Color([255,0,0,1]));
           
           var ptBreak0 = new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_CIRCLE, 2, lineSymbol, new Color([255,0,0,1]));
           var ptBreak1 = new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_CIRCLE, 4, lineSymbol, new Color([255,0,0,1]));
-        var ptBreak2 = new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_CIRCLE, 8, lineSymbol, new Color([255,0,0,1]));
+          var ptBreak2 = new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_CIRCLE, 8, lineSymbol, new Color([255,0,0,1]));
            var ptBreak3 = new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_CIRCLE, 16, lineSymbol, new Color([255,0,0,1]));
            var ptBreak4 = new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_CIRCLE, 32, lineSymbol, new Color([255,0,0,1]));
            var ptBreak5 = new SimpleMarkerSymbol(SimpleMarkerSymbol.STYLE_CIRCLE, 64, lineSymbol, new Color([255,0,0,1]));
@@ -91,7 +101,7 @@
             zoom: 4
           });
           
-          map.addLayers([venueFeatureLayer, teamTravelLayerHover]);
+          map.addLayers([teamFeatureLayer, venueFeatureLayer, teamTravelLayerHover]);
           console.log("TeamLayer: ", teamFeatureLayer);
           
           on(map, "click", function(){
@@ -402,23 +412,34 @@
           });
           
           on(dom.byId("allTeamButton"), "click", function(evt){
-              console.log("button evt: ", evt);
-              teamFilter(evt);
+              teamFilter("1=1");
+          });
+          on(dom.byId("R68TeamButton"), "click", function(evt){
+              teamFilter("Rd_68_Result='W' OR Rd_68_Result='L'");
+          });
+          on(dom.byId("R64TeamButton"), "click", function(evt){
+              teamFilter("Rd_64_Result='W' OR Rd_64_Result='L'");
+          });          
+          on(dom.byId("R32TeamButton"), "click", function(evt){
+              teamFilter("Rd_64_Result='W'");
           });
           on(dom.byId("R16TeamButton"), "click", function(evt){
-              console.log("button evt: ", evt);
-              teamFilter(evt);
+              teamFilter("Rd_32_Result='W'");
           });
+          on(dom.byId("R8TeamButton"), "click", function(evt){
+              teamFilter("Rd_16_Result='W'");
+          });  
+          on(dom.byId("R4TeamButton"), "click", function(evt){
+              teamFilter("Rd_8_Result='W'");
+          });
+          on(dom.byId("R2TeamButton"), "click", function(evt){
+              teamFilter("Rd_4_Result='W'");
+          }); 
           
-          function teamFilter(btnEvt){
-              var expression;
-              if(btnEvt.srcElement.id == "R16TeamButton"){
-                 expression = "Rd32_Result='W'";
-              }
-              console.log("expression: ", expression);
-              teamFeatureLayer.setDefinitionExpression(expression);
-              map.addLayer(teamFeatureLayer);
-//              setTeamHeatmapRenderer();
+          function teamFilter(exp){             
+              console.log("expression: ", exp);
+              teamFeatureLayer.setDefinitionExpression(exp);
+              setTeamHeatmapRenderer();
           }
           
           function setTeamHeatmapRenderer(){
@@ -426,7 +447,7 @@
               smartMapping.createHeatmapRenderer({
                   basemap: "dark-gray",
                   blurRadius: 18,
-                  fadeToTransparent: false,
+                  fadeToTransparent: true,
                   //field:
                   layer: teamFeatureLayer,
                   maxRatio: 1,
@@ -457,6 +478,14 @@
                 <button id="R8TeamButton" class="btn btn-sm btn-primary">Elite 8</button><br>
                 <button id="R4TeamButton" class="btn btn-sm btn-primary">Final 4</button><br>
                 <button id="R2TeamButton" class="btn btn-sm btn-primary">Championship</button><br>
+            </div>
+        </div>
+        <div id="results" class="panel panel-default">
+            <div class="panel-heading">
+              <h3 class="panel-title">View results by round</h3>
+            </div>
+            <div class="panel-body"> 
+                
             </div>
         </div>
    </div>
